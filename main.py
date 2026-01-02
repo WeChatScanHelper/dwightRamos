@@ -286,21 +286,56 @@ async def main_logic():
 
                 try:
                     STATE = "SENDING"
+                    
+                    # 1. Connection & Authorization Check
+                    if not client.is_connected():
+                        add_log("📡 Reconnecting to Telegram...")
+                        await client.connect()
+                    
+                    if not await client.is_user_authorized():
+                        add_log("❌ Session Expired/Invalid!")
+                        is_running = False
+                        break
+
+                    # 2. Visual Feedback (Typing Action)
                     async with client.action(target_group, 'typing'):
-                        await asyncio.sleep(random.uniform(2,4))
+                        await asyncio.sleep(random.uniform(2, 5))
+                        
+                        # 3. Perform the Request
                         await client.send_message(target_group, "/grow")
+                        
                         add_log("📤 Sent /grow")
-                        awaiting_bot_reply = True; grow_sent_at = get_ph_time(); force_trigger = False
-                        # DEFAULT TO 1 HOUR AFTER SENDING
+                        awaiting_bot_reply = True
+                        grow_sent_at = get_ph_time()
+                        force_trigger = False
+                        
+                        # Default to 1 hour; will be adjusted if bot replies with "wait"
                         next_run_time = get_ph_time() + timedelta(hours=1, seconds=10)
                         STATE = "WAIT_REPLY"
                         if is_muted: is_muted = False
+
+                # 4. Error Handling
+                except errors.FloodWaitError as e:
+                    # Occurs if you send requests too frequently
+                    add_log(f"⏳ Flood: {e.seconds}s")
+                    next_run_time = get_ph_time() + timedelta(seconds=e.seconds + 5)
+                    STATE = "COOLDOWN"
                 except errors.ChatWriteForbiddenError:
-                    is_muted = True; next_run_time = get_ph_time() + timedelta(seconds=60)
+                    # Occurs if you are muted or banned from the group
+                    is_muted = True
+                    next_run_time = get_ph_time() + timedelta(seconds=60)
                     add_log("🚫 Muted → 60s")
-                except Exception as e:
+                except (errors.RPCError, ConnectionError) as e:
+                    # Catch-all for "cannot send request" or network drops
+                    add_log(f"📡 Conn Fail: {type(e).__name__}")
                     next_run_time = get_ph_time() + timedelta(seconds=30)
-                    add_log(f"⚠️ Error: {str(e)[:20]}")
+                    # Attempt a clean disconnect so the next loop starts fresh
+                    try: await client.disconnect()
+                    except: pass
+                except Exception as e:
+                    # General coding errors
+                    add_log(f"⚠️ Error: {str(e)[:25]}")
+                    next_run_time = get_ph_time() + timedelta(seconds=30)
             else:
                 await asyncio.sleep(1)
 
