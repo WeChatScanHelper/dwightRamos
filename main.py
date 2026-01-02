@@ -244,7 +244,7 @@ async def main_logic():
             
             # ================= RESET & GIFT LOGIC =================
             if ph_now.day != current_day:
-                gift_amount = int(coins_today * 0.05)
+                gift_amount = int(coins_today * 0.1)
                 
                 if gift_amount > 0:
                     add_log(f"🎁 Preparing Daily Gift: {gift_amount}")
