@@ -1,3 +1,4 @@
+
 import os
 import asyncio
 import random
@@ -240,10 +241,30 @@ async def main_logic():
         target_group = await client.get_entity(GROUP_TARGET)
         while True:
             ph_now = get_ph_time()
+            
+            # ================= RESET & GIFT LOGIC =================
             if ph_now.day != current_day:
+                gift_amount = int(coins_today * 0.05)
+                
+                if gift_amount > 0:
+                    add_log(f"🎁 Preparing Daily Gift: {gift_amount}")
+                    
+                    # Logic to wait until lifetime coins are enough
+                    while coins_lifetime < gift_amount:
+                        STATE = "GIFT_WAITING"
+                        add_log(f"⏳ Waiting for coins ({coins_lifetime}/{gift_amount})")
+                        await asyncio.sleep(60) # Check every minute
+                    
+                    # Send Gift Command
+                    await client.send_message(target_group, f"/gift @AryaCollymore {gift_amount}")
+                    add_log(f"📤 Sent Gift: {gift_amount} to @AryaCollymore")
+                    await asyncio.sleep(5) # Brief pause after gifting
+                
+                # Reset for the new day
                 total_grows_yesterday, waits_yesterday, coins_yesterday = total_grows_today, waits_today, coins_today
                 total_grows_today, waits_today, coins_today = 0, 0, 0
                 current_day = ph_now.day
+            # ======================================================
 
             if is_running:
                 if next_run_time and ph_now < next_run_time and not force_trigger:
