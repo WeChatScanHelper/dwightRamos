@@ -179,16 +179,17 @@ def clear_logs():
 def run_flask():
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
 
-# ================= TELEGRAM LOGIC =================
+# ================= MAIN TELEGRAM LOGIC =================
 async def main_logic():
     global last_bot_reply, total_grows_today, total_grows_yesterday, coins_today, coins_yesterday, coins_lifetime
     global waits_today, waits_yesterday, is_running, force_trigger, next_run_time, current_day
-    global retry_used, grow_sent_at, STATE, awaiting_bot_reply, no_reply_streak, shadow_ban_flag, is_muted
+    global retry_used, grow_sent_at, STATE, awaiting_bot_reply, no_reply_streak, shadow_ban_flag, learned_cooldown, is_muted
 
     if not SESSION_STRING:
-        add_log("❌ ERROR: SESSION_STRING environment variable is missing!")
-        while True: await asyncio.sleep(3600)
+        add_log("❌ CRITICAL: No SESSION_STRING found in Env Vars.")
+        return
 
+    # Initialize client without starting it immediately
     client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
 
     @client.on(events.NewMessage(chats=GROUP_TARGET))
@@ -205,10 +206,11 @@ async def main_logic():
                 last_bot_reply = msg
                 awaiting_bot_reply = False
                 retry_used = False
-                no_reply_streak = 0
+                grow_sent_at = None
                 STATE = "COOLDOWN"
+                no_reply_streak = 0
 
-                # Parse Wait
+                # Option 1: Wait message
                 if "please wait" in msg.lower():
                     waits_today += 1
                     wait_m = re.search(r'(\d+)m', msg)
@@ -217,27 +219,29 @@ async def main_logic():
                     if wait_m: total_wait += int(wait_m.group(1))*60
                     if wait_s: total_wait += int(wait_s.group(1))
                     next_run_time = get_ph_time() + timedelta(seconds=total_wait + 5)
-                    add_log(f"🕒 Wait: {total_wait}s")
-                
-                # Parse Success
+                    add_log(f"🕒 Bot said wait: {total_wait}s")
+                    return
+
+                # Option 2: Stats Update
                 now_match = re.search(r'Now:\s*([\d,]+)', msg)
                 if now_match: coins_lifetime = int(now_match.group(1).replace(',', ''))
                 
                 gain_match = re.search(r'Change:\s*\+?(-?\d+)', msg)
                 if "GROW SUCCESS" in msg.upper() or gain_match:
+                    total_grows_today += 1
                     if gain_match: coins_today += int(gain_match.group(1))
                     next_run_time = get_ph_time() + timedelta(hours=1, seconds=10)
                     add_log("✅ Success! Next in 1hr.")
 
-    # Start Client Connection
+    # INITIAL CONNECTION (Avoids EOFError on Render)
     try:
         await client.connect()
         if not await client.is_user_authorized():
-            add_log("❌ SESSION INVALID - Re-generate string locally!")
+            add_log("❌ SESSION EXPIRED: Create a new string string locally.")
             return
-        add_log("🚀 Telegram Connected!")
+        add_log("📡 Telegram Connected.")
     except Exception as e:
-        add_log(f"❌ Connection Error: {str(e)[:20]}")
+        add_log(f"❌ Initial Conn Fail: {str(e)[:20]}")
         return
 
     target_group = await client.get_entity(GROUP_TARGET)
@@ -246,70 +250,78 @@ async def main_logic():
         try:
             ph_now = get_ph_time()
 
-            # Day Reset Logic
+            # RESET LOGIC
             if ph_now.day != current_day:
                 total_grows_yesterday, waits_yesterday, coins_yesterday = total_grows_today, waits_today, coins_today
                 total_grows_today, waits_today, coins_today = 0, 0, 0
                 current_day = ph_now.day
-                add_log("🌅 New Day Started.")
+                add_log("🌅 Daily Reset performed.")
 
             if is_running:
-                # Timer Check
+                # Timer Wait
                 if next_run_time and ph_now < next_run_time and not force_trigger:
                     STATE = "WAIT_TIMER"
                     await asyncio.sleep(1)
                     continue
 
-                # No Reply Timeout Logic
+                # No Reply / Timeout Check
                 if awaiting_bot_reply and grow_sent_at:
                     elapsed = (ph_now - grow_sent_at).total_seconds()
                     if elapsed > MAX_REPLY_WAIT:
-                        awaiting_bot_reply = False
                         no_reply_streak += 1
+                        awaiting_bot_reply = False
                         force_trigger = True
-                        add_log("🔁 No reply → retrying")
+                        add_log("🔁 No reply → Retry")
 
                 if no_reply_streak >= 3:
-                    delay = random.randint(300, 600)
+                    delay = random.randint(300, 900)
                     next_run_time = get_ph_time() + timedelta(seconds=delay)
-                    add_log(f"🛡️ Shadowban Protection: {delay}s")
+                    add_log(f"🛡️ Warning (+{delay}s)")
                     no_reply_streak = 0
                     continue
 
-                # SENDING LOGIC
-                STATE = "SENDING"
-                if not client.is_connected(): await client.connect()
-
-                async with client.action(target_group, 'typing'):
-                    await asyncio.sleep(random.uniform(2, 4))
-                    await client.send_message(target_group, "/grow")
-                    add_log("📤 Sent /grow")
+                # SENDING LOGIC (With Reconnection Check)
+                try:
+                    STATE = "SENDING"
                     
-                    awaiting_bot_reply = True
-                    grow_sent_at = get_ph_time()
-                    force_trigger = False
-                    next_run_time = get_ph_time() + timedelta(hours=1, seconds=10)
-                    STATE = "WAIT_REPLY"
-                    if is_muted: is_muted = False
+                    # FIX: Check connection before every send
+                    if not client.is_connected():
+                        await client.connect()
 
-        except errors.FloodWaitError as e:
-            add_log(f"⏳ Flood: {e.seconds}s")
-            next_run_time = get_ph_time() + timedelta(seconds=e.seconds + 5)
-        except errors.ChatWriteForbiddenError:
-            is_muted = True
-            next_run_time = get_ph_time() + timedelta(seconds=60)
-            add_log("🚫 Muted (60s)")
-        except (errors.RPCError, ConnectionError) as e:
-            add_log(f"📡 Conn Fail: {type(e).__name__}")
-            next_run_time = get_ph_time() + timedelta(seconds=30)
-            try: await client.disconnect(); await client.connect()
-            except: pass
+                    async with client.action(target_group, 'typing'):
+                        await asyncio.sleep(random.uniform(2, 5))
+                        await client.send_message(target_group, "/grow")
+                        
+                        add_log("📤 Sent /grow")
+                        awaiting_bot_reply = True
+                        grow_sent_at = get_ph_time()
+                        force_trigger = False
+                        next_run_time = get_ph_time() + timedelta(hours=1, seconds=10)
+                        STATE = "WAIT_REPLY"
+                        if is_muted: is_muted = False
+
+                except errors.FloodWaitError as e:
+                    add_log(f"⏳ Flood: {e.seconds}s")
+                    next_run_time = get_ph_time() + timedelta(seconds=e.seconds + 5)
+                except errors.ChatWriteForbiddenError:
+                    is_muted = True
+                    next_run_time = get_ph_time() + timedelta(seconds=60)
+                    add_log("🚫 Muted → 60s")
+                except (errors.RPCError, ConnectionError) as e:
+                    add_log(f"📡 Conn Error: {type(e).__name__}")
+                    next_run_time = get_ph_time() + timedelta(seconds=30)
+                    # Cleanly restart connection
+                    try: await client.disconnect(); await client.connect()
+                    except: pass
+        
         except Exception as e:
-            add_log(f"⚠️ Error: {str(e)[:20]}")
+            add_log(f"⚠️ Loop Error: {str(e)[:20]}")
             await asyncio.sleep(5)
-            
+
         await asyncio.sleep(1)
 
 if __name__ == "__main__":
+    # Start Flask first
     threading.Thread(target=run_flask, daemon=True).start()
+    # Start Telegram Logic
     asyncio.run(main_logic())
