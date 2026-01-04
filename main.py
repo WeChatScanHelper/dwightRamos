@@ -28,6 +28,7 @@ waits_yesterday = 0
 coins_today = 0
 coins_yesterday = 0
 coins_lifetime = 0
+MyAutoTimer = 30
 
 is_muted = False
 is_running = False
@@ -41,7 +42,7 @@ grow_sent_at = None
 retry_used = False
 MAX_REPLY_WAIT = 25
 cooldown_history = []
-learned_cooldown = 30
+learned_cooldown = MyAutoTimer
 no_reply_streak = 0
 shadow_ban_flag = False
 awaiting_bot_reply = False
@@ -239,8 +240,8 @@ async def main_logic(client):
                 if "GROW SUCCESS" in msg.upper() or gain_match:
                     total_grows_today += 1
                     if gain_match: coins_today += int(gain_match.group(1))
-                    next_run_time = get_ph_time() + timedelta(hours=0, seconds=30)
-                    add_log("✅ Success! Next grow in 1 hour.")
+                    next_run_time = get_ph_time() + timedelta(hours=0, seconds=MyAutoTimer)
+                    add_log(f"✅ Success! Next grow in {MyAutoTimer}s.")
 
     add_log("Permanent Listener Connected. Reading all chat.")
     target_group = await client.get_entity(GROUP_TARGET)
@@ -296,7 +297,7 @@ async def main_logic(client):
                     awaiting_bot_reply = True
                     grow_sent_at = get_ph_time()
                     force_trigger = False
-                    next_run_time = get_ph_time() + timedelta(hours=0, seconds=30) 
+                    next_run_time = get_ph_time() + timedelta(hours=0, seconds=MyAutoTimer) 
                     STATE = "WAIT_REPLY"
                     if is_muted: is_muted = False
             except errors.ChatWriteForbiddenError:
