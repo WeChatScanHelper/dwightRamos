@@ -10,13 +10,13 @@ from telethon import TelegramClient, events, errors
 from telethon.sessions import StringSession
 
 # ================= CONFIG =================
-API_ID = int(os.getenv("API_ID", 36062585))
-API_HASH = os.getenv("API_HASH", "27af3370413767173feb169bec5065f9")
+API_ID = int(os.getenv("API_ID", 35068955))
+API_HASH = os.getenv("API_HASH", "55516255d54a323197d13303d2bcc3da")
 SESSION_STRING = os.getenv("SESSION_STRING")
 
-GROUP_TARGET = -1003598172312
+GROUP_TARGET = -1003621946413
 MY_NAME = "aaronzzw"
-BOT_USERNAME = "FkerKeyBot"
+BOT_USERNAME = "FkerKeyRPSBot"
 
 # ================= STATE =================
 last_bot_reply = "System Online. Waiting for start..."
