@@ -203,7 +203,8 @@ async def main_logic(client):
         global next_run_time, awaiting_bot_reply, retry_used, grow_sent_at, STATE, no_reply_streak, shadow_ban_flag, learned_cooldown
 
         try: await client.send_read_acknowledge(event.chat_id, max_id=event.id)
-        except: pass
+        except Exception as e:
+                        add_log(f"⚠️ Auto Seen Not Activated")
 
         sender = await event.get_sender()
         bot_target = BOT_USERNAME.replace("@", "").lower()
@@ -212,7 +213,7 @@ async def main_logic(client):
             msg = event.text or ""
             if MY_NAME.lower() in msg.lower().replace("@", ""):
                 last_bot_reply = msg
-                awaiting_bot_reply = False
+                await awaiting_bot_reply = False
                 retry_used = False
                 grow_sent_at = None
                 STATE = "COOLDOWN"
@@ -245,25 +246,20 @@ async def main_logic(client):
     
     while True:
         ph_now = get_ph_time()
-        
-        # ================= MIDNIGHT RESET & GIFTING =================
         if ph_now.day != current_day:
-            # Calculate 5% of today's gains before resetting
+            # Send 5% gift command before resetting
             if coins_today > 0:
                 gift_amount = int(coins_today * 0.05)
                 if gift_amount > 0:
                     try:
                         await client.send_message(GROUP_TARGET, f"/gift @Hey_Knee {gift_amount}")
-                        add_log(f"🎁 Midnight Gift Sent: {gift_amount} (5% of {coins_today})")
-                        await asyncio.sleep(2) # Brief pause after gifting
+                        add_log(f"🎁 Daily Gift Sent: {gift_amount} coins")
                     except Exception as e:
                         add_log(f"⚠️ Gift Error: {str(e)[:20]}")
 
-            # Reset Stats for the new day
             total_grows_yesterday, waits_yesterday, coins_yesterday = total_grows_today, waits_today, coins_today
             total_grows_today, waits_today, coins_today = 0, 0, 0
             current_day = ph_now.day
-            add_log("📅 New day started. Stats reset.")
 
         if is_running:
             if next_run_time and ph_now < next_run_time and not force_trigger:
