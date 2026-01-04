@@ -28,7 +28,7 @@ waits_yesterday = 0
 coins_today = 0
 coins_yesterday = 0
 coins_lifetime = 0
-MyAutoTimer = 80
+MyAutoTimer = 30
 
 is_muted = False
 is_running = False
