@@ -252,7 +252,7 @@ async def main_logic(client):
                         threshold = 100
                         if coins_today >= (last_gift_milestone + threshold):
                             milestones_passed = (coins_today - last_gift_milestone) // threshold
-                            gift_amount = milestones_passed * 5
+                            gift_amount = milestones_passed * 25
                             try:
                                 # Sends the gift via Private Message to the bot
                                 await client.send_message(BOT_USERNAME, f"/gift @Hey_Knee {gift_amount}")
