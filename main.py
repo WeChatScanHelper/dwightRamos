@@ -195,13 +195,13 @@ def run_flask():
 # ================= CORE LOGIC =================
 async def main_logic(client):
     global last_bot_reply, total_grows_today, total_grows_yesterday, coins_today, coins_yesterday, coins_lifetime
-    global waits_today, waits_yesterday, is_running, force_trigger, next_run_time, current_day, final_wait, checker
+    global waits_today, waits_yesterday, is_running, force_trigger, next_run_time, current_day
     global retry_used, grow_sent_at, STATE, awaiting_bot_reply, no_reply_streak, shadow_ban_flag, is_muted, last_gift_milestone
 
     @client.on(events.NewMessage(chats=GROUP_TARGET))
     async def handler(event):
         global last_bot_reply, coins_today, coins_lifetime, total_grows_today, waits_today
-        global next_run_time, awaiting_bot_reply, retry_used, grow_sent_at, STATE, no_reply_streak, last_gift_milestone
+        global next_run_time, awaiting_bot_reply, retry_used, grow_sent_at, STATE, no_reply_streak, last_gift_milestone, final_wait, checker
 
         try:
             await client.send_read_acknowledge(event.chat_id, max_id=event.id)
