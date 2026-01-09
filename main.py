@@ -18,6 +18,7 @@ MY_NAME = "aaronzzw"
 BOT_USERNAME = "FkerKeyRPSBot"
 
 # ================= STATE =================
+# ================= STATE =================
 last_bot_reply = "System Online."
 bot_logs = ["Listener Active. Reading all chat..."]
 
@@ -265,7 +266,14 @@ async def main_logic(client):
 
                 next_run_time = get_ph_time() + timedelta(seconds=MyAutoTimer)
                 add_log(f"✅ Success! Next in {MyAutoTimer}s.")
+                safe_coins = max(1, coins_lifetime)
 
+            # 2. Calculate the formula
+                calculated = 2346 / (safe_coins ** 0.593)
+
+            # 3. Force it to be a whole number (Integer) and set a            minimum of 10s
+            # This prevents "float" issues with the sleep timer
+                final_wait = max(1, int(calculated) - 10)
     # Main Loop
     while True:
         ph_now = get_ph_time()
@@ -323,17 +331,26 @@ async def main_logic(client):
             await asyncio.sleep(1)
 
 async def stay_active_loop(client):
+    global final_wait,checker
+    checker = False
     while True:
         # REMOVED: if is_running: (This allows it to run even if stopped)
         try:
-            # Wait between 200 to 400 seconds between actions
-            await asyncio.sleep(random.randint(200, 400))
+            first_run = 10
+            
+            if not checker or coins_lifetime < 1000:
+              await asyncio.sleep(first_run)
+              checker = True
+              add_log("Filler Cooldown: 10")
+            else:
+              await asyncio.sleep(final_wait)
+              add_log("Filler Cooldown {final_wait}")
             
             messages = await client.get_messages(GROUP_TARGET, limit=5)
             if not messages: 
                 continue
 
-            if random.random() < 0.6:
+            if random.random() < 1.0:
                 target_msg = random.choice(messages)
                 await client(functions.messages.SendReactionRequest(
                     peer=GROUP_TARGET, 
