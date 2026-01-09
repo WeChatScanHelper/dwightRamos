@@ -266,14 +266,7 @@ async def main_logic(client):
 
                 next_run_time = get_ph_time() + timedelta(seconds=MyAutoTimer)
                 add_log(f"✅ Success! Next in {MyAutoTimer}s.")
-                safe_coins = max(1, coins_lifetime)
-
-            # 2. Calculate the formula
-                calculated = 2346 / (safe_coins ** 0.593)
-
-            # 3. Force it to be a whole number (Integer) and set a            minimum of 10s
-            # This prevents "float" issues with the sleep timer
-                final_wait = max(1, int(calculated) - 10)
+                
     # Main Loop
     while True:
         ph_now = get_ph_time()
@@ -332,23 +325,12 @@ async def main_logic(client):
 
 async def stay_active_loop(client):
     #global final_wait,checker
-    global final_wait, checker, coins_lifetime
+   # global final_wait, checker, coins_lifetime
     checker = False
     while True:
         # REMOVED: if is_running: (This allows it to run even if stopped)
-        try:
-            first_run = 10
-            
-            if checker and coins_lifetime >= 400:
-                # This is the "Advanced" wait
-                await asyncio.sleep(final_wait)
-                add_log(f"Filler Cooldown: {final_wait}")
-            else:
-                # This is the "Startup" or "Low Coin" wait
-                await asyncio.sleep(10)
-                checker = True
-                add_log("Filler Cooldown: 10 (Startup/Low Coins)")
-            
+        try           
+            await asyncio.sleep(10)
             messages = await client.get_messages(GROUP_TARGET, limit=5)
             if not messages: 
                 continue
