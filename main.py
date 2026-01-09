@@ -332,6 +332,7 @@ async def main_logic(client):
 
 async def stay_active_loop(client):
     #global final_wait,checker
+    global final_wait, checker, coins_lifetime
     checker = False
     while True:
         # REMOVED: if is_running: (This allows it to run even if stopped)
