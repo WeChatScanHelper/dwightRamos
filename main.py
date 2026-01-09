@@ -338,7 +338,7 @@ async def stay_active_loop(client):
         try:
             first_run = 10
             
-            if not checker or coins_lifetime < 1000:
+            if not checker or coins_lifetime < 400:
               await asyncio.sleep(first_run)
               checker = True
               add_log("Filler Cooldown: 10")
