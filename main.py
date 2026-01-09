@@ -331,7 +331,7 @@ async def stay_active_loop(client):
         # REMOVED: if is_running: (This allows it to run even if stopped)
         try:          
             await asyncio.sleep(10)
-            messages = await client.get_messages(GROUP_TARGET, limit=5)
+            messages = await client.get_messages(GROUP_TARGET, limit=15)
             if not messages: 
                 continue
 
