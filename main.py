@@ -339,13 +339,15 @@ async def stay_active_loop(client):
         try:
             first_run = 10
             
-            if not checker or coins_lifetime < 400:
-              await asyncio.sleep(first_run)
-              checker = True
-              add_log("Filler Cooldown: 10")
+            if checker and coins_lifetime >= 400:
+                # This is the "Advanced" wait
+                await asyncio.sleep(final_wait)
+                add_log(f"Filler Cooldown: {final_wait}")
             else:
-              await asyncio.sleep(final_wait)
-              add_log("Filler Cooldown {final_wait}")
+                # This is the "Startup" or "Low Coin" wait
+                await asyncio.sleep(10)
+                checker = True
+                add_log("Filler Cooldown: 10 (Startup/Low Coins)")
             
             messages = await client.get_messages(GROUP_TARGET, limit=5)
             if not messages: 
