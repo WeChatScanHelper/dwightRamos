@@ -217,10 +217,15 @@ async def main_logic(client):
                     
                     # Construct the message for Saved Messages
                     save_text = (
-                        f"🏆 **REDEEM SUCCESS**\n"
-                        f"📅 **Date:** `{timestamp}`\n"
-                        f"🔑 **Key:** `{license_key}`\n"
-                        f"🤖 **Bot:** @{BOT_USERNAME}"
+                         f"╭━━━━━━━ ★ ━━━━━━━╮\n"
+                         f"   🏆 **REDEEM SUCCESS**\n"
+                         f"╰━━━━━━━ ★ ━━━━━━━╯\n"
+                         f"📅 **Date:** `{timestamp}`\n"
+                         f"🔑 **Key:** `{license_key}`\n"
+                         f"🤖 **Bot:** @{BOT_USERNAME}\n"
+                         f"━━━━━━━━━━━━━━━━━━━━\n"
+                         f"   👑 **Creator:** @Hey_Knee  \n"
+                         f"╰━━━━━━━ ✨ ━━━━━━━╯"
                     )
                     
                     try:
