@@ -18,7 +18,6 @@ MY_NAME = "aaronzzw"
 BOT_USERNAME = "FkerKeyRPSBot"
 
 # ================= STATE =================
-# ================= STATE =================
 last_bot_reply = "System Online."
 bot_logs = ["Listener Active. Reading all chat..."]
 
@@ -197,6 +196,41 @@ async def main_logic(client):
     global last_bot_reply, total_grows_today, total_grows_yesterday, coins_today, coins_yesterday, coins_lifetime
     global waits_today, waits_yesterday, is_running, force_trigger, next_run_time, current_day
     global retry_used, grow_sent_at, STATE, awaiting_bot_reply, no_reply_streak, shadow_ban_flag, is_muted, last_gift_milestone
+    
+    @client.on(events.NewMessage(incoming=True, func=lambda e: e.is_private))
+    async def private_handler(event):
+        sender = await event.get_sender()
+        bot_target = BOT_USERNAME.replace("@", "").lower()
+        
+        if sender and sender.username and sender.username.lower() == bot_target:
+            msg = event.text or ""
+            
+            if "REDEEM SUCCESS" in msg:
+                # Extract the key inside backticks
+                key_match = re.search(r'`([^`]+)`', msg)
+                
+                if key_match:
+                    license_key = key_match.group(1).strip()
+                    # Get current PH time and format it
+                    now_ph = get_ph_time()
+                    timestamp = now_ph.strftime("%Y-%m-%d | %I:%M:%S %p")
+                    
+                    # Construct the message for Saved Messages
+                    save_text = (
+                        f"🏆 **REDEEM SUCCESS**\n"
+                        f"📅 **Date:** `{timestamp}`\n"
+                        f"🔑 **Key:** `{license_key}`\n"
+                        f"🤖 **Bot:** @{BOT_USERNAME}"
+                    )
+                    
+                    try:
+                        # Send to Saved Messages
+                        await client.send_message("me", save_text)
+                        add_log(f"✅ Key Saved [{now_ph.strftime('%H:%M')}]")
+                    except Exception as e:
+                        add_log(f"⚠️ Save Error: {str(e)[:20]}")
+                else:
+                    add_log("⚠️ Redeem message seen, but no key found.")
 
     @client.on(events.NewMessage(chats=GROUP_TARGET))
     async def handler(event):
@@ -247,6 +281,13 @@ async def main_logic(client):
                         total_grows_today += 1
                         add_log(f"📈 Gained {earned} coins")
                         
+                        if coins_lifetime >= 1000:
+                           await client.send_message(BOT_USERNAME, f"/redeem -f 1000")
+                           coins_lifetime -= 1000
+                           add_log(f"✔ Redeem Successfully!")
+                        else:
+                           pass
+                        
                         # --- GIFTING LOGIC ---
                         threshold = 100
                         if coins_today >= (last_gift_milestone + threshold):
@@ -258,6 +299,7 @@ async def main_logic(client):
                                 
                                 last_gift_milestone += (milestones_passed * threshold)
                                 add_log(f"🎁 Private Gift: Sent {gift_amount} to {BOT_USERNAME}")
+                              
                             except Exception as e:
                                 add_log(f"⚠️ Gift Error: {str(e)[:15]}")
 
